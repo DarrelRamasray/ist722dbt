@@ -1,0 +1,24 @@
+# =====================================================================
+# _chinook__sources.yml
+# Location: music_sales/models/chinook/ in the ist722dbt repository
+# What it does: tells dbt where the nine RAW tables live, so models can
+#   use source('chinook', 'invoiceline') instead of table names.
+# =====================================================================
+
+version: 2
+
+sources:
+  - name: chinook
+    description: "Chinook tables copied unchanged from the school SQL Server (staging guide, Parts 1-7)."
+    database: RAW
+    schema: CHINOOK
+    tables:
+      - name: album
+      - name: artist
+      - name: customer
+      - name: employee
+      - name: genre
+      - name: invoice
+      - name: invoiceline
+      - name: mediatype
+      - name: track

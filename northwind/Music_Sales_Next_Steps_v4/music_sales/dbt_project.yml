@@ -1,0 +1,27 @@
+# =====================================================================
+# dbt_project.yml  -  the Music Sales dbt project
+# Location: music_sales/ in the ist722dbt repository (next to demo,
+#   northwind and quickstart). Point your dbt project's "Project
+#   subdirectory" at music_sales to use it (guide Part 5).
+# =====================================================================
+
+name: 'music_sales'
+version: '1.0.0'
+
+# The dbt platform supplies the connection, so this name isn't used there.
+profile: 'default'
+
+model-paths: ["models"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  music_sales:
+    chinook:
+      # Build every Music Sales model as a table, in its own schema:
+      # <your dbt schema>_CHINOOK, e.g. DBT_DRAMASRAY_CHINOOK. That keeps
+      # these tables apart from anything your assignment projects built.
+      +materialized: table
+      +schema: chinook
