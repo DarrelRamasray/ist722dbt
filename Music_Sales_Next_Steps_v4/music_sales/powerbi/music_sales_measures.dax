@@ -1,0 +1,23 @@
+// =====================================================================
+// music_sales_measures.dax
+// Use in: Power BI Desktop, guide Part 9, step "Add the measures".
+// For each measure: select the FACT_SALE table, click New measure,
+// then copy ONE line below (the line that starts with the measure name)
+// into the formula bar and press Enter.
+// Expected value with no filters is in the comment above each line.
+// =====================================================================
+
+// Expected: 2,328.60
+Total Sales = SUM ( FACT_SALE[SALEAMOUNT] )
+
+// Expected: 2,240
+Units Sold = SUM ( FACT_SALE[QUANTITY] )
+
+// Expected: 1.04  (unit price is non-additive, so it is averaged, not summed)
+Average Unit Price = AVERAGE ( FACT_SALE[UNITPRICE] )
+
+// Expected: 412
+Invoice Count = DISTINCTCOUNT ( FACT_SALE[INVOICEID] )
+
+// Expected: 59
+Customers With Sales = DISTINCTCOUNT ( FACT_SALE[CUSTOMERKEY] )
