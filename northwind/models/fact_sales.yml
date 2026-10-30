@@ -1,0 +1,60 @@
+version: 2
+
+models:
+  - name: fact_sales
+    description: Transaction fact table. One row per line item ordered. Includes product data
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - orderid
+              - productkey
+    columns:
+      - name: orderid
+        description: Degenerate dimension. Source key of the order used for drill through
+        data_tests:
+          - not_null
+      - name: customerkey
+        description: Dimension key for dim_customer
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customerkey
+      - name: employeekey
+        description: Dimension key for dim_employee
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_employee')
+                field: employeekey
+      - name: orderdatekey
+        description: role play Order Date Dimension key for dim_date
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: datekey
+      - name: productkey
+        description: Dimension key for dim_product
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: productkey
+      - name: quantity
+        description: additive fact for the quantity of the product on the order
+        data_tests:
+          - not_null
+      - name: extendedpriceamount
+        description: additive fact for quantity * product price
+        data_tests:
+          - not_null
+      - name: discountamount
+        description: additive fact for extended price * discount
+        data_tests:
+          - not_null
+      - name: soldamount
+        description: additive fact for extended price - discount amount
+        data_tests:
+          - not_null
