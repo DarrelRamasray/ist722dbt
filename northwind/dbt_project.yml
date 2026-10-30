@@ -1,4 +1,4 @@
-name: 'my_new_project'
+name: 'northwind'
 version: '1.0.0'
 config-version: 2
 
@@ -16,5 +16,7 @@ clean-targets:
   - "dbt_packages"
 
 models:
-  my_new_project:
-    +materialized: view
+  northwind:
+    +materialized: table
+    database: analytics
+    +schema: northwind
