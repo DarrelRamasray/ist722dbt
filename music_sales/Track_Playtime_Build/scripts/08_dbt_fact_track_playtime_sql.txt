@@ -1,0 +1,38 @@
+-- =====================================================================
+-- fact_track_playtime.sql
+-- Location: music_sales/models/chinook/ in the ist722dbt repository
+-- Design:  fact_track_playtime sheet, 1. Bus Matrix workbook
+-- Grain:   one row per track played (2,000 rows)
+-- Source:  RAW.CHINOOK.TRACKPLAYS is SIMULATED (Chinook has no play
+--          events); track length comes from the real RAW.CHINOOK.TRACK.
+-- Reuses:  dim_date, dim_customer and dim_track from Music Sales
+--          (conformed), plus the new dim_playlist.
+-- =====================================================================
+
+{{ config(materialized='table') }}
+
+with stg_trackplays as (
+    select * from {{ source('chinook', 'trackplays') }}
+),
+
+stg_track as (
+    select * from {{ source('chinook', 'track') }}
+)
+
+select
+    tp.playeventid                                  as playeventid,
+    tp.playlistid                                   as playlistkey,
+    tp.trackid                                      as trackkey,
+    tp.customerid                                   as customerkey,
+    cast(tp.playedat as date)                       as playdatekey,
+    tp.playedat                                     as playedat,
+    tp.secondsplayed                                as secondsplayed,
+    cast(round(t.milliseconds / 1000) as int)       as trackdurationseconds,
+    cast(1 as int)                                  as playcount
+
+from stg_trackplays as tp
+
+-- The inner join loses no rows: every TRACKPLAYS.TRACKID exists in TRACK
+-- (check 11 in 05_verify_playtime_raw).
+inner join stg_track as t
+    on t.trackid = tp.trackid

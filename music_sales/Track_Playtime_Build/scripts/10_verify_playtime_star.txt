@@ -1,0 +1,96 @@
+-- =====================================================================
+-- 10_verify_playtime_star.txt
+-- Run in: Snowsight > Projects > Workspaces > + Add New > SQL File
+--         Run the USE lines, then click inside the WITH checks AS query
+--         and press Ctrl+Enter.
+-- What it does: 20 checks of DIM_PLAYLIST and FACT_TRACK_PLAYTIME after
+--   dbt build, including the conformed dimensions shared with Music
+--   Sales. All 20 rows should say PASS.
+-- Uses the same role, warehouse and schema as dbt (Milestone 2 values).
+-- =====================================================================
+USE ROLE ACCOUNTADMIN;
+USE WAREHOUSE TRANSFORMING;
+USE SCHEMA ANALYTICS.DBT_DRAMASRAY_CHINOOK;
+
+WITH checks AS (
+    SELECT 1 AS n, 'DIM_PLAYLIST row count' AS check_name, 18 AS expected,
+           (SELECT COUNT(*) FROM DIM_PLAYLIST) AS actual
+
+    UNION ALL SELECT 2, 'FACT_TRACK_PLAYTIME row count', 2000,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME)
+
+    UNION ALL SELECT 3, 'FACT_TRACK_PLAYTIME distinct PLAYEVENTID', 2000,
+           (SELECT COUNT(DISTINCT PLAYEVENTID) FROM FACT_TRACK_PLAYTIME)
+
+    UNION ALL SELECT 4, 'Sum of PLAYCOUNT', 2000,
+           (SELECT SUM(PLAYCOUNT) FROM FACT_TRACK_PLAYTIME)
+
+    UNION ALL SELECT 5, 'Sum of SECONDSPLAYED (same as RAW)', 934348,
+           (SELECT SUM(SECONDSPLAYED) FROM FACT_TRACK_PLAYTIME)
+
+    UNION ALL SELECT 6, 'Sum of TRACKDURATIONSECONDS', 1150714,
+           (SELECT SUM(TRACKDURATIONSECONDS) FROM FACT_TRACK_PLAYTIME)
+
+    UNION ALL SELECT 7, 'Full plays (SECONDSPLAYED = TRACKDURATIONSECONDS)', 1210,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME
+             WHERE SECONDSPLAYED = TRACKDURATIONSECONDS)
+
+    UNION ALL SELECT 8, 'Plays with SECONDSPLAYED outside 1 to TRACKDURATIONSECONDS', 0,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME
+             WHERE SECONDSPLAYED < 1 OR SECONDSPLAYED > TRACKDURATIONSECONDS)
+
+    UNION ALL SELECT 9, 'PLAYLISTKEY values missing from DIM_PLAYLIST', 0,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME f
+             WHERE NOT EXISTS (SELECT 1 FROM DIM_PLAYLIST d WHERE d.PLAYLISTKEY = f.PLAYLISTKEY))
+
+    UNION ALL SELECT 10, 'TRACKKEY values missing from DIM_TRACK (conformed)', 0,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME f
+             WHERE NOT EXISTS (SELECT 1 FROM DIM_TRACK d WHERE d.TRACKKEY = f.TRACKKEY))
+
+    UNION ALL SELECT 11, 'CUSTOMERKEY values missing from DIM_CUSTOMER (conformed)', 0,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME f
+             WHERE NOT EXISTS (SELECT 1 FROM DIM_CUSTOMER d WHERE d.CUSTOMERKEY = f.CUSTOMERKEY))
+
+    UNION ALL SELECT 12, 'PLAYDATEKEY values missing from DIM_DATE (conformed)', 0,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME f
+             WHERE NOT EXISTS (SELECT 1 FROM DIM_DATE d WHERE d.DATEKEY = f.PLAYDATEKEY))
+
+    UNION ALL SELECT 13, 'Plays whose track is not on that playlist (RAW PLAYLISTTRACK)', 0,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME f
+             WHERE NOT EXISTS (SELECT 1 FROM RAW.CHINOOK.PLAYLISTTRACK pt
+                                WHERE pt.PLAYLISTID = f.PLAYLISTKEY
+                                  AND pt.TRACKID = f.TRACKKEY))
+
+    UNION ALL SELECT 14, 'Distinct customers', 59,
+           (SELECT COUNT(DISTINCT CUSTOMERKEY) FROM FACT_TRACK_PLAYTIME)
+
+    UNION ALL SELECT 15, 'Distinct tracks played', 688,
+           (SELECT COUNT(DISTINCT TRACKKEY) FROM FACT_TRACK_PLAYTIME)
+
+    UNION ALL SELECT 16, 'Distinct playlists played from', 14,
+           (SELECT COUNT(DISTINCT PLAYLISTKEY) FROM FACT_TRACK_PLAYTIME)
+
+    UNION ALL SELECT 17, 'Plays in 2013, through the conformed DIM_DATE', 388,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME f
+              JOIN DIM_DATE d ON d.DATEKEY = f.PLAYDATEKEY
+             WHERE d.YEAR = 2013)
+
+    UNION ALL SELECT 18, 'Classical plays, through the conformed DIM_TRACK', 596,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME f
+              JOIN DIM_TRACK d ON d.TRACKKEY = f.TRACKKEY
+             WHERE d.GENRE = 'Classical')
+
+    UNION ALL SELECT 19, 'FACT_SALE still has 2,240 rows (Music Sales unchanged)', 2240,
+           (SELECT COUNT(*) FROM FACT_SALE)
+
+    UNION ALL SELECT 20, 'FACT_TRACK_PLAYTIME.PLAYDATEKEY type is DATE (same as DIM_DATE.DATEKEY)', 1,
+           (SELECT IFF(DATA_TYPE = 'DATE', 1, 0)
+              FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+               AND TABLE_NAME = 'FACT_TRACK_PLAYTIME'
+               AND COLUMN_NAME = 'PLAYDATEKEY')
+)
+SELECT n, check_name, expected, actual,
+       IFF(actual = expected, 'PASS', 'FAIL') AS result
+FROM checks
+ORDER BY n;

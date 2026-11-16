@@ -1,0 +1,61 @@
+# =====================================================================
+# 13_generate_trackplays_REFERENCE.txt  (Python; REFERENCE ONLY - you do not need to run it)
+# Save as generate_trackplays.py and run with: python generate_trackplays.py
+# What it does: creates trackplays.csv, a SIMULATED set of play events for
+#   the Track Playtime business process. Chinook has no play-event table,
+#   so these rows are generated, but every CustomerId, PlaylistId and
+#   TrackId is a real Chinook value and every track really is on the
+#   playlist it was played from (Chinook PlaylistTrack).
+# Inputs (your own exports from the school SQL Server):
+#   Chinook.dbo.Customer.csv, Chinook.dbo.Track.csv,
+#   Chinook.dbo.Playlist.csv, Chinook.dbo.PlaylistTrack.csv
+# Rules:
+#   - fixed random seed 722, so the file is identical every time
+#   - 2,000 plays; PlayedAt uniformly random between 2009-01-01 00:00:00
+#     and 2013-12-22 23:59:59 (inside the existing dim_date range)
+#   - customer: uniformly random among the 59 customers
+#   - playlist: uniformly random among playlists that contain tracks
+#   - track: uniformly random among that playlist's tracks
+#   - track duration (seconds) = Track.Milliseconds / 1000, rounded half up
+#   - 60% of plays run the whole track (SecondsPlayed = duration);
+#     the rest stop early (SecondsPlayed uniformly 1 .. duration - 1)
+#   - PlayEventId numbers the plays 1..2000 in PlayedAt order
+# =====================================================================
+import csv, random
+from datetime import datetime, timedelta
+
+SRC = './'   # the folder holding the four Chinook CSV exports
+OUT = './trackplays.csv'
+random.seed(722)
+N = 2000
+
+customers = [int(r['CustomerId']) for r in csv.DictReader(open(SRC + 'Chinook.dbo.Customer.csv', encoding='utf-8-sig'))]
+duration = {int(r['TrackId']): (int(r['Milliseconds']) + 500) // 1000
+            for r in csv.DictReader(open(SRC + 'Chinook.dbo.Track.csv', encoding='utf-8-sig'))}
+tracks_on = {}
+for r in csv.DictReader(open(SRC + 'Chinook.dbo.PlaylistTrack.csv', encoding='utf-8-sig')):
+    tracks_on.setdefault(int(r['PlaylistId']), []).append(int(r['TrackId']))
+playlists = sorted(tracks_on)          # only playlists that contain tracks
+for p in playlists:
+    tracks_on[p].sort()
+
+start = datetime(2009, 1, 1, 0, 0, 0)
+span = int((datetime(2013, 12, 22, 23, 59, 59) - start).total_seconds())
+
+rows = []
+for _ in range(N):
+    c = random.choice(customers)
+    p = random.choice(playlists)
+    t = random.choice(tracks_on[p])
+    when = start + timedelta(seconds=random.randint(0, span))
+    d = duration[t]
+    secs = d if (random.random() < 0.60 or d < 2) else random.randint(1, d - 1)
+    rows.append((when, c, t, p, secs))
+rows.sort(key=lambda r: (r[0], r[1], r[2]))
+
+with open(OUT, 'w', newline='', encoding='utf-8') as f:
+    w = csv.writer(f, lineterminator='\r\n')
+    w.writerow(['PlayEventId', 'CustomerId', 'TrackId', 'PlaylistId', 'PlayedAt', 'SecondsPlayed'])
+    for i, (when, c, t, p, secs) in enumerate(rows, start=1):
+        w.writerow([i, c, t, p, when.strftime('%Y-%m-%d %H:%M:%S') + '.000', secs])
+print('wrote', OUT, len(rows), 'rows; playlists used:', playlists)

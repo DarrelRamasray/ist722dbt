@@ -1,0 +1,30 @@
+// =====================================================================
+// 11_powerbi_playtime_measures.txt
+// Use in: Power BI Desktop (MusicSales.pbix), guide Part 11, step "Add the
+// measures". For each measure: select the FACT_TRACK_PLAYTIME table in the
+// Data pane, click Home > New measure, copy ONE line below (the line that
+// starts with the measure name) into the formula bar and press Enter.
+// Expected value with no filters is in the comment above each line.
+// These figures come from SIMULATED play events.
+// =====================================================================
+
+// Expected: 2,000
+Play Count = SUM ( FACT_TRACK_PLAYTIME[PLAYCOUNT] )
+
+// Expected: 934,348
+Total Seconds Played = SUM ( FACT_TRACK_PLAYTIME[SECONDSPLAYED] )
+
+// Expected: 259.54
+Total Hours Played = DIVIDE ( [Total Seconds Played], 3600 )
+
+// Expected: 467.17
+Average Seconds per Play = DIVIDE ( [Total Seconds Played], [Play Count] )
+
+// Expected: 0.81 (format as a percentage: 81.2%)
+Completion Rate = DIVIDE ( SUM ( FACT_TRACK_PLAYTIME[SECONDSPLAYED] ), SUM ( FACT_TRACK_PLAYTIME[TRACKDURATIONSECONDS] ) )
+
+// Expected: 1,210
+Full Plays = CALCULATE ( [Play Count], FILTER ( FACT_TRACK_PLAYTIME, FACT_TRACK_PLAYTIME[SECONDSPLAYED] = FACT_TRACK_PLAYTIME[TRACKDURATIONSECONDS] ) )
+
+// Expected: 59
+Listeners = DISTINCTCOUNT ( FACT_TRACK_PLAYTIME[CUSTOMERKEY] )

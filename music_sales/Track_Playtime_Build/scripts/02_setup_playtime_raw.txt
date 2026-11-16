@@ -1,0 +1,48 @@
+-- =====================================================================
+-- 02_setup_playtime_raw.txt
+-- Run in: Snowsight > Projects > Workspaces > + Add New > SQL File
+--         Paste everything, then run the whole file:
+--         Ctrl+Shift+Enter (Mac: Cmd+Shift+Return)
+-- What it does: adds three empty tables to RAW.CHINOOK for the Track
+--   Playtime process. It REUSES the Milestone 2 file format CHINOOK_CSV
+--   and stage CHINOOK_STAGE.
+--
+-- Do NOT re-run the Milestone 2 file 01_setup.sql: it would empty the
+-- nine Music Sales tables. This file only touches the three new tables.
+-- Re-running THIS file empties only PLAYLIST, PLAYLISTTRACK, TRACKPLAYS.
+-- =====================================================================
+USE ROLE SYSADMIN;
+USE WAREHOUSE COMPUTE_WH;
+USE SCHEMA RAW.CHINOOK;
+
+-- Types from the Query 1 schema export: PlaylistId int NOT NULL,
+-- Name nvarchar(120) NULL; PlaylistTrack has two NOT NULL int columns.
+CREATE OR REPLACE TABLE PLAYLIST (
+  PLAYLISTID    INT NOT NULL,
+  NAME          VARCHAR(120),
+  _SOURCE_FILE  VARCHAR,
+  _LOADED_AT    TIMESTAMP_LTZ
+);
+
+CREATE OR REPLACE TABLE PLAYLISTTRACK (
+  PLAYLISTID    INT NOT NULL,
+  TRACKID       INT NOT NULL,
+  _SOURCE_FILE  VARCHAR,
+  _LOADED_AT    TIMESTAMP_LTZ
+);
+
+-- Chinook has no play-event table, so this one holds SIMULATED rows.
+CREATE OR REPLACE TABLE TRACKPLAYS (
+  PLAYEVENTID    INT NOT NULL,
+  CUSTOMERID     INT NOT NULL,
+  TRACKID        INT NOT NULL,
+  PLAYLISTID     INT NOT NULL,
+  PLAYEDAT       TIMESTAMP_NTZ NOT NULL,
+  SECONDSPLAYED  INT NOT NULL,
+  _SOURCE_FILE   VARCHAR,
+  _LOADED_AT     TIMESTAMP_LTZ
+)
+COMMENT = 'SIMULATED play events for the Track Playtime process. Chinook has no play-event table. Generated 2026-11-12 (seed 722) from real Chinook CustomerId, PlaylistId and TrackId values; every track is on the playlist it was played from.';
+
+-- Check: 12 tables (the 9 from Milestone 2 plus these 3)
+SHOW TABLES IN SCHEMA RAW.CHINOOK;

@@ -1,0 +1,29 @@
+# =====================================================================
+# _chinook__sources.yml
+# Location: music_sales/models/chinook/ in the ist722dbt repository
+# What it does: tells dbt where the RAW tables live, so models can
+#   use source('chinook', 'invoiceline') instead of table names.
+# Track Playtime (Milestone 3) added playlist, playlisttrack and trackplays.
+# =====================================================================
+
+version: 2
+
+sources:
+  - name: chinook
+    description: "Chinook tables copied unchanged from the school SQL Server (staging guide, Parts 1-7), plus the simulated TRACKPLAYS table."
+    database: RAW
+    schema: CHINOOK
+    tables:
+      - name: album
+      - name: artist
+      - name: customer
+      - name: employee
+      - name: genre
+      - name: invoice
+      - name: invoiceline
+      - name: mediatype
+      - name: track
+      - name: playlist
+      - name: playlisttrack
+      - name: trackplays
+        description: "SIMULATED play events (Chinook has no play-event table). Generated with seed 722 from real customer, playlist and track IDs."

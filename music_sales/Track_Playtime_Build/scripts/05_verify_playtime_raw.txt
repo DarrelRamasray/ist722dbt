@@ -1,0 +1,89 @@
+-- =====================================================================
+-- 05_verify_playtime_raw.txt
+-- Run in: Snowsight > Projects > Workspaces > + Add New > SQL File
+--         Run the USE lines, then click inside the WITH checks AS query
+--         and press Ctrl+Enter.
+-- What it does: 19 checks of the three new RAW.CHINOOK tables.
+--   All 19 rows should say PASS. Expected values come from the files
+--   themselves (playlist 18, playlisttrack 8,715, trackplays 2,000).
+-- =====================================================================
+USE ROLE SYSADMIN;
+USE WAREHOUSE COMPUTE_WH;
+USE SCHEMA RAW.CHINOOK;
+
+WITH checks AS (
+    SELECT 1 AS n, 'PLAYLIST row count' AS check_name, 18 AS expected,
+           (SELECT COUNT(*) FROM PLAYLIST) AS actual
+
+    UNION ALL SELECT 2, 'PLAYLIST distinct PLAYLISTID', 18,
+           (SELECT COUNT(DISTINCT PLAYLISTID) FROM PLAYLIST)
+
+    UNION ALL SELECT 3, 'PLAYLIST 5 name is 90’s Music (curly apostrophe kept)', 1,
+           (SELECT COUNT(*) FROM PLAYLIST WHERE PLAYLISTID = 5 AND NAME = '90’s Music')
+
+    UNION ALL SELECT 4, 'PLAYLISTTRACK row count', 8715,
+           (SELECT COUNT(*) FROM PLAYLISTTRACK)
+
+    UNION ALL SELECT 5, 'PLAYLISTTRACK distinct (PLAYLISTID, TRACKID) pairs', 8715,
+           (SELECT COUNT(*) FROM (SELECT DISTINCT PLAYLISTID, TRACKID FROM PLAYLISTTRACK))
+
+    UNION ALL SELECT 6, 'PLAYLISTTRACK.PLAYLISTID values missing from PLAYLIST', 0,
+           (SELECT COUNT(*) FROM PLAYLISTTRACK pt
+             WHERE NOT EXISTS (SELECT 1 FROM PLAYLIST p WHERE p.PLAYLISTID = pt.PLAYLISTID))
+
+    UNION ALL SELECT 7, 'PLAYLISTTRACK.TRACKID values missing from TRACK', 0,
+           (SELECT COUNT(*) FROM PLAYLISTTRACK pt
+             WHERE NOT EXISTS (SELECT 1 FROM TRACK t WHERE t.TRACKID = pt.TRACKID))
+
+    UNION ALL SELECT 8, 'TRACKPLAYS row count', 2000,
+           (SELECT COUNT(*) FROM TRACKPLAYS)
+
+    UNION ALL SELECT 9, 'TRACKPLAYS distinct PLAYEVENTID', 2000,
+           (SELECT COUNT(DISTINCT PLAYEVENTID) FROM TRACKPLAYS)
+
+    UNION ALL SELECT 10, 'TRACKPLAYS.CUSTOMERID values missing from CUSTOMER', 0,
+           (SELECT COUNT(*) FROM TRACKPLAYS tp
+             WHERE NOT EXISTS (SELECT 1 FROM CUSTOMER c WHERE c.CUSTOMERID = tp.CUSTOMERID))
+
+    UNION ALL SELECT 11, 'TRACKPLAYS.TRACKID values missing from TRACK', 0,
+           (SELECT COUNT(*) FROM TRACKPLAYS tp
+             WHERE NOT EXISTS (SELECT 1 FROM TRACK t WHERE t.TRACKID = tp.TRACKID))
+
+    UNION ALL SELECT 12, 'TRACKPLAYS.PLAYLISTID values missing from PLAYLIST', 0,
+           (SELECT COUNT(*) FROM TRACKPLAYS tp
+             WHERE NOT EXISTS (SELECT 1 FROM PLAYLIST p WHERE p.PLAYLISTID = tp.PLAYLISTID))
+
+    UNION ALL SELECT 13, 'Plays whose track is not on that playlist (PLAYLISTTRACK)', 0,
+           (SELECT COUNT(*) FROM TRACKPLAYS tp
+             WHERE NOT EXISTS (SELECT 1 FROM PLAYLISTTRACK pt
+                                WHERE pt.PLAYLISTID = tp.PLAYLISTID
+                                  AND pt.TRACKID = tp.TRACKID))
+
+    UNION ALL SELECT 14, 'Plays with SECONDSPLAYED outside 1 to the track length', 0,
+           (SELECT COUNT(*) FROM TRACKPLAYS tp
+              JOIN TRACK t ON t.TRACKID = tp.TRACKID
+             WHERE tp.SECONDSPLAYED < 1
+                OR tp.SECONDSPLAYED > ROUND(t.MILLISECONDS / 1000))
+
+    UNION ALL SELECT 15, 'Sum of TRACKPLAYS.SECONDSPLAYED', 934348,
+           (SELECT SUM(SECONDSPLAYED) FROM TRACKPLAYS)
+
+    UNION ALL SELECT 16, 'Plays dated outside 2009-01-01 to 2013-12-22 (the DIM_DATE range)', 0,
+           (SELECT COUNT(*) FROM TRACKPLAYS
+             WHERE CAST(PLAYEDAT AS DATE) NOT BETWEEN '2009-01-01' AND '2013-12-22')
+
+    UNION ALL SELECT 17, 'Distinct customers who played something', 59,
+           (SELECT COUNT(DISTINCT CUSTOMERID) FROM TRACKPLAYS)
+
+    UNION ALL SELECT 18, 'Distinct playlists played from (4 playlists have no tracks)', 14,
+           (SELECT COUNT(DISTINCT PLAYLISTID) FROM TRACKPLAYS)
+
+    UNION ALL SELECT 19, 'Rows missing _SOURCE_FILE or _LOADED_AT (3 tables)', 0,
+           (SELECT (SELECT COUNT(*) FROM PLAYLIST WHERE _SOURCE_FILE IS NULL OR _LOADED_AT IS NULL)
+                 + (SELECT COUNT(*) FROM PLAYLISTTRACK WHERE _SOURCE_FILE IS NULL OR _LOADED_AT IS NULL)
+                 + (SELECT COUNT(*) FROM TRACKPLAYS WHERE _SOURCE_FILE IS NULL OR _LOADED_AT IS NULL))
+)
+SELECT n, check_name, expected, actual,
+       IFF(actual = expected, 'PASS', 'FAIL') AS result
+FROM checks
+ORDER BY n;

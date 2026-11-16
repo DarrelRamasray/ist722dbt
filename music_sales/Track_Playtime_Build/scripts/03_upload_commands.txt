@@ -1,0 +1,21 @@
+REM =====================================================================
+REM 03_upload_commands.txt
+REM Run in: Command Prompt (Windows key, type cmd, press Enter).
+REM Paste ONE line at a time and press Enter after each.
+REM What it does: uploads the three new CSV files to the Milestone 2
+REM   stage RAW.CHINOOK.CHINOOK_STAGE, using your Milestone 2 Snowflake
+REM   CLI connection my_snowflake (role SYSADMIN).
+REM Before this: playlist.csv, playlisttrack.csv and trackplays.csv must
+REM   be in C:\Users\darre\Documents\chinook_extract (guide Part 1).
+REM Each PUT should print a row with status UPLOADED.
+REM =====================================================================
+
+chcp 65001
+
+cd %USERPROFILE%\Documents\chinook_extract
+
+snow sql -c my_snowflake -q "PUT 'file://C:/Users/darre/Documents/chinook_extract/playlist.csv' @RAW.CHINOOK.CHINOOK_STAGE AUTO_COMPRESS=TRUE OVERWRITE=TRUE"
+
+snow sql -c my_snowflake -q "PUT 'file://C:/Users/darre/Documents/chinook_extract/playlisttrack.csv' @RAW.CHINOOK.CHINOOK_STAGE AUTO_COMPRESS=TRUE OVERWRITE=TRUE"
+
+snow sql -c my_snowflake -q "PUT 'file://C:/Users/darre/Documents/chinook_extract/trackplays.csv' @RAW.CHINOOK.CHINOOK_STAGE AUTO_COMPRESS=TRUE OVERWRITE=TRUE"

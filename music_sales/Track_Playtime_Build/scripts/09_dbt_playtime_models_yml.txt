@@ -1,0 +1,85 @@
+# =====================================================================
+# _playtime__models.yml
+# Location: music_sales/models/chinook/ in the ist722dbt repository
+#   (a NEW file next to _chinook__models.yml, which stays unchanged)
+# What it does: describes dim_playlist and fact_track_playtime and adds a
+#   data test for every PK, unique and not_null tick in their design
+#   sheets, plus a relationships test for every FK Ref Dimension.col.
+# Tests added: 18 (4 on dim_playlist, 14 on fact_track_playtime).
+# =====================================================================
+
+version: 2
+
+models:
+  - name: dim_playlist
+    description: "One row per playlist."
+    columns:
+      - name: playlistkey
+        description: "Dimension key (the source PlaylistId)"
+        data_tests:
+          - unique
+          - not_null
+      - name: playlistid
+        description: "Primary key of the source system table"
+        data_tests:
+          - unique
+          - not_null
+      - name: playlistname
+        description: "Name of the playlist; can be NULL in the source (Playlist.Name allows NULL)"
+
+  - name: fact_track_playtime
+    description: "One row per track played; each row is unique by playeventid. SIMULATED source: Chinook has no play-event table."
+    columns:
+      - name: playeventid
+        description: "Source key of the play event; used for drill-through"
+        data_tests:
+          - unique
+          - not_null
+      - name: playlistkey
+        description: "Dimension FK for dim_playlist; the playlist the track was played from"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_playlist')
+                field: playlistkey
+      - name: trackkey
+        description: "Dimension FK for dim_track; Gives name, genre, media type, artist, album"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_track')
+                field: trackkey
+      - name: customerkey
+        description: "Dimension FK for dim_customer; the customer who played the track"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customerkey
+      - name: playdatekey
+        description: "Dimension FK for dim_date; the play date"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: datekey
+      - name: playedat
+        description: "Date and time of the play; degenerate (there is no time dimension)"
+        data_tests:
+          - not_null
+      - name: secondsplayed
+        description: "Seconds of the track that were played; Additive"
+        data_tests:
+          - not_null
+      - name: trackdurationseconds
+        description: "Full length of the track in seconds; Additive; divide secondsplayed by it for the completion rate"
+        data_tests:
+          - not_null
+      - name: playcount
+        description: "So plays can be counted; Always 1; Additive"
+        data_tests:
+          - not_null

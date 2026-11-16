@@ -1,0 +1,23 @@
+-- =====================================================================
+-- dim_playlist.sql
+-- Location: music_sales/models/chinook/ in the ist722dbt repository
+-- Design:  dim_playlist sheet, 1. Bus Matrix workbook
+-- Grain:   one row per playlist (18 rows)
+-- Key:     playlistkey holds the source PlaylistId, the same convention
+--          as dim_track, dim_customer and the other Music Sales dimensions.
+-- Note:    playlist names repeat (two each of Music, Movies, TV Shows and
+--          Audiobooks), so group by playlistkey when counts must not merge.
+-- =====================================================================
+
+{{ config(materialized='table') }}
+
+with stg_playlist as (
+    select * from {{ source('chinook', 'playlist') }}
+)
+
+select
+    p.playlistid    as playlistkey,
+    p.playlistid    as playlistid,
+    p.name          as playlistname
+
+from stg_playlist as p

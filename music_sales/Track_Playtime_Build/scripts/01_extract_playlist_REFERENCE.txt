@@ -1,0 +1,29 @@
+-- =====================================================================
+-- 01_extract_playlist_REFERENCE.txt
+-- REFERENCE ONLY. You do not need to run this: playlist.csv and
+-- playlisttrack.csv are already in the zip's data folder, taken from
+-- your own exports of the school SQL Server.
+-- Keep it for the project's code deliverable, or use it to re-extract.
+--
+-- Run in: VS Code (MSSQL extension), connected to the school SQL Server
+--         externalworld.cent-su.org,11433 , database Chinook
+-- How: run ONE query at a time (highlight it, Ctrl+Shift+E), then save
+--      the result grid as the CSV named in its comment, inside
+--      C:\Users\darre\Documents\chinook_extract
+-- =====================================================================
+
+
+-- ---------------------------------------------------------------------
+-- 1 of 2  ->  playlist.csv  (18 rows)
+-- ---------------------------------------------------------------------
+SELECT PlaylistId, Name
+FROM Chinook.dbo.Playlist
+ORDER BY PlaylistId;
+
+
+-- ---------------------------------------------------------------------
+-- 2 of 2  ->  playlisttrack.csv  (8,715 rows)
+-- ---------------------------------------------------------------------
+SELECT PlaylistId, TrackId
+FROM Chinook.dbo.PlaylistTrack
+ORDER BY PlaylistId, TrackId;

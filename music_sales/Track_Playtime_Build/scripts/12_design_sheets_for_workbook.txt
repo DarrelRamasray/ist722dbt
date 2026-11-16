@@ -1,0 +1,53 @@
+=====================================================================
+12_design_sheets_for_workbook.txt
+Use in: Excel, 1. Bus Matrix workbook (guide Part 5).
+The lines between the BEGIN and END markers are TAB-separated, so pasting
+them into Excel fills one cell per value. Copy only the lines between the
+markers, never the markers themselves.
+=====================================================================
+
+
+A. New sheet fact_track_playtime (a copy of fact_TEMPLATE)
+---------------------------------------------------------------------
+A1. Type each Table Details value into column B of the matching row
+    (B3 to B6). B5 is a drop-down: pick Transaction.
+
+    Table Name:       fact_track_playtime
+    Table Type:       Fact
+    Fact Grain Type:  Transaction
+    Description:      One row per track played; each row is unique by playeventid. SIMULATED source: Chinook has no play-event table, so plays were generated from real customer, playlist and track IDs.
+
+A2. Click cell A10 of the new sheet, then paste these 9 lines
+    (columns A to H: Column Name, Description, DataType, PK, unique,
+    not_null, FK Ref Dimension.col, Source):
+
+----- BEGIN fact_track_playtime columns -----
+playeventid	Source key of the play event; used for drill-through	int	X	X	X		Chinook.TrackPlays.PlayEventId (simulated)
+playlistkey	Dimension FK for dim_playlist; the playlist the track was played from	int			X	dim_playlist.playlistkey	Chinook.TrackPlays.PlaylistId
+trackkey	Dimension FK for dim_track; Gives name, genre, media type, artist, album	int			X	dim_track.trackkey	Chinook.TrackPlays.TrackId
+customerkey	Dimension FK for dim_customer; the customer who played the track	int			X	dim_customer.customerkey	Chinook.TrackPlays.CustomerId
+playdatekey	Dimension FK for dim_date; the play date	date			X	dim_date.datekey	Chinook.TrackPlays.PlayedAt; CAST(PlayedAt AS date)
+playedat	Date and time of the play; Degenerate (no time dimension)	datetime			X		Chinook.TrackPlays.PlayedAt
+secondsplayed	Seconds of the track that were played; Additive	int			X		Chinook.TrackPlays.SecondsPlayed
+trackdurationseconds	Full length of the track in seconds; Additive; used for the completion rate	int			X		Chinook.Track.Milliseconds; ROUND(Milliseconds / 1000)
+playcount	So plays can be counted; Always 1; Additive	int			X		Insert '1'
+----- END fact_track_playtime columns -----
+
+
+B. Sheet dim_playlist (already in the workbook): three small fixes
+---------------------------------------------------------------------
+These match the source schema export (Query 1) and the dbt model.
+    C9   type  int             (playlistkey is blank today; it holds PlaylistId)
+    C11  type  nvarchar(120)   (today: nvarchar)
+    F11  delete the X          (Playlist.Name allows NULL in the source)
+
+Leave everything else on dim_playlist as it is. Its SQL text box says the
+key "will be replaced with a surrogate key"; the build keeps PlaylistId as
+the key, the same convention as dim_track and dim_customer.
+
+
+C. Bus Matrix sheet: nothing to change
+---------------------------------------------------------------------
+Row 6 (Track Playtime) already says fact_track_playtime, Transaction,
+"One row per track played", facts "Seconds played, track duration, play
+count", and marks Date, Customer, Playlist and Track. The build matches it.

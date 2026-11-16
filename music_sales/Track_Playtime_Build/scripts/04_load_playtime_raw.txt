@@ -1,0 +1,75 @@
+-- =====================================================================
+-- 04_load_playtime_raw.txt
+-- Run in: Snowsight > Projects > Workspaces > + Add New > SQL File
+--         Run ONE statement at a time (click inside it, Ctrl+Enter).
+-- What it does: checks the three staged files, then copies each into its
+--   new RAW.CHINOOK table. Expected row counts are in the comments.
+-- =====================================================================
+USE ROLE SYSADMIN;
+USE WAREHOUSE COMPUTE_WH;
+USE SCHEMA RAW.CHINOOK;
+
+-- A. The stage should now list 12 files: the 9 from Milestone 2 plus
+--    playlist.csv.gz, playlisttrack.csv.gz and trackplays.csv.gz
+LIST @CHINOOK_STAGE;
+
+-- B. Data rows in the three new files (header not counted).
+--    Expect playlist 18, playlisttrack 8715, trackplays 2000.
+SELECT METADATA$FILENAME AS file_name, COUNT(*) AS data_rows
+FROM @CHINOOK_STAGE (FILE_FORMAT => 'RAW.CHINOOK.CHINOOK_CSV',
+                     PATTERN => '^(.*/)?(playlist|playlisttrack|trackplays)[.]csv([.]gz)?$') t
+GROUP BY METADATA$FILENAME
+ORDER BY file_name;
+
+-- C. Preview: the curly apostrophe in playlist 5 must read 90’s Music
+SELECT t.$1 AS playlistid, t.$2 AS name
+FROM @CHINOOK_STAGE (FILE_FORMAT => 'RAW.CHINOOK.CHINOOK_CSV',
+                     PATTERN => '^(.*/)?playlist[.]csv([.]gz)?$') t
+ORDER BY TO_NUMBER(t.$1);
+
+-- D. Load each table. ON_ERROR = 'ABORT_STATEMENT' loads nothing if any row fails.
+
+-- PLAYLIST  <-  playlist.csv  (expect 18 rows)
+COPY INTO PLAYLIST (
+    PLAYLISTID, NAME, _SOURCE_FILE, _LOADED_AT
+)
+FROM (
+  SELECT
+    t.$1, t.$2, METADATA$FILENAME, METADATA$START_SCAN_TIME
+  FROM @CHINOOK_STAGE t
+)
+PATTERN = '^(.*/)?playlist[.]csv([.]gz)?$'
+FILE_FORMAT = (FORMAT_NAME = 'RAW.CHINOOK.CHINOOK_CSV')
+ON_ERROR = 'ABORT_STATEMENT';
+
+-- PLAYLISTTRACK  <-  playlisttrack.csv  (expect 8,715 rows)
+COPY INTO PLAYLISTTRACK (
+    PLAYLISTID, TRACKID, _SOURCE_FILE, _LOADED_AT
+)
+FROM (
+  SELECT
+    t.$1, t.$2, METADATA$FILENAME, METADATA$START_SCAN_TIME
+  FROM @CHINOOK_STAGE t
+)
+PATTERN = '^(.*/)?playlisttrack[.]csv([.]gz)?$'
+FILE_FORMAT = (FORMAT_NAME = 'RAW.CHINOOK.CHINOOK_CSV')
+ON_ERROR = 'ABORT_STATEMENT';
+
+-- TRACKPLAYS  <-  trackplays.csv  (expect 2,000 rows, SIMULATED)
+COPY INTO TRACKPLAYS (
+    PLAYEVENTID, CUSTOMERID, TRACKID, PLAYLISTID, PLAYEDAT, SECONDSPLAYED,
+    _SOURCE_FILE, _LOADED_AT
+)
+FROM (
+  SELECT
+    t.$1, t.$2, t.$3, t.$4, t.$5, t.$6, METADATA$FILENAME, METADATA$START_SCAN_TIME
+  FROM @CHINOOK_STAGE t
+)
+PATTERN = '^(.*/)?trackplays[.]csv([.]gz)?$'
+FILE_FORMAT = (FORMAT_NAME = 'RAW.CHINOOK.CHINOOK_CSV')
+ON_ERROR = 'ABORT_STATEMENT';
+
+-- E. Row counts after loading: expect 18, 8715, 2000
+SELECT 'PLAYLIST' AS table_name, COUNT(*) AS row_count FROM PLAYLIST
+UNION ALL SELECT 'PLAYLISTTRACK', COUNT(*) FROM PLAYLISTTRACK
+UNION ALL SELECT 'TRACKPLAYS', COUNT(*) FROM TRACKPLAYS;
