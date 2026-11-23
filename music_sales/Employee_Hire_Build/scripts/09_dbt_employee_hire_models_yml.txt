@@ -1,0 +1,54 @@
+# =====================================================================
+# _employee_hire__models.yml
+# Location: music_sales/models/chinook/ in the ist722dbt repository
+#   (a NEW file next to _chinook__models.yml and _playtime__models.yml)
+# What it does: describes fact_employee and adds a data test for every
+#   PK, unique and not_null tick in its design sheet, a relationships
+#   test for every FK Ref Dimension.col, and the allowed salary bands.
+# Tests added: 10.
+# =====================================================================
+
+version: 2
+
+models:
+  - name: fact_employee
+    description: "One row per employee hired; each row is unique by employeeid. Starting salary and salary band are SIMULATED: Chinook has no salary data."
+    columns:
+      - name: employeeid
+        description: "Source key of the employee; used for drill-through"
+        data_tests:
+          - unique
+          - not_null
+      - name: employeekey
+        description: "Dimension FK for dim_employee; the employee hired"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_employee')
+                field: employeekey
+      - name: hiredatekey
+        description: "Dimension FK for dim_date; the hire date"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: datekey
+      - name: hirecount
+        description: "So hires can be counted; Always 1; Additive"
+        data_tests:
+          - not_null
+      - name: ageathire
+        description: "Age in whole years on the hire date; Non-additive (average it); NULL if the birth date is NULL"
+      - name: startingsalary
+        description: "Annual starting salary in CAD; Additive; SIMULATED"
+        data_tests:
+          - not_null
+      - name: salaryband
+        description: "Band of the starting salary; Degenerate; SIMULATED"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['1: Under 50K', '2: 50K to 75K', '3: 75K to 100K', '4: 100K and over']

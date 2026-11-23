@@ -1,0 +1,37 @@
+-- =====================================================================
+-- 03_load_hire_raw.txt
+-- Run in: Snowsight > Projects > Workspaces > + Add New > SQL File
+--         Run ONE statement at a time (click inside it, Ctrl+Enter).
+-- What it does: checks the staged file, then copies it into
+--   RAW.CHINOOK.EMPLOYEESALARY. Expected values are in the comments.
+-- =====================================================================
+USE ROLE SYSADMIN;
+USE WAREHOUSE COMPUTE_WH;
+USE SCHEMA RAW.CHINOOK;
+
+-- A. The stage should now list 13 files, including employeesalary.csv.gz
+LIST @CHINOOK_STAGE;
+
+-- B. Preview the staged file: 8 rows, salaries 132000, 87000, 45000,
+--    47500, 45000, 89000, 62500, 61000 for employees 1 to 8
+SELECT t.$1 AS employeeid, t.$2 AS startingsalary
+FROM @CHINOOK_STAGE (FILE_FORMAT => 'RAW.CHINOOK.CHINOOK_CSV',
+                     PATTERN => '^(.*/)?employeesalary[.]csv([.]gz)?$') t
+ORDER BY TO_NUMBER(t.$1);
+
+-- C. Load. ON_ERROR = 'ABORT_STATEMENT' loads nothing if any row fails.
+-- EMPLOYEESALARY  <-  employeesalary.csv  (expect 8 rows, SIMULATED)
+COPY INTO EMPLOYEESALARY (
+    EMPLOYEEID, STARTINGSALARY, _SOURCE_FILE, _LOADED_AT
+)
+FROM (
+  SELECT
+    t.$1, t.$2, METADATA$FILENAME, METADATA$START_SCAN_TIME
+  FROM @CHINOOK_STAGE t
+)
+PATTERN = '^(.*/)?employeesalary[.]csv([.]gz)?$'
+FILE_FORMAT = (FORMAT_NAME = 'RAW.CHINOOK.CHINOOK_CSV')
+ON_ERROR = 'ABORT_STATEMENT';
+
+-- D. Row count after loading: expect 8
+SELECT COUNT(*) AS row_count FROM EMPLOYEESALARY;

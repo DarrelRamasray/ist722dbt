@@ -1,0 +1,41 @@
+# =====================================================================
+# 14_generate_employeesalary_REFERENCE.txt  (Python; REFERENCE ONLY)
+# Save as generate_employeesalary.py and run, from the folder holding
+# your Employee export:  python generate_employeesalary.py employee.csv
+# What it does: creates employeesalary.csv, a SIMULATED annual starting
+#   salary (CAD) for each Chinook employee. Chinook has no salary data,
+#   so these values are generated; every EmployeeId is real.
+# Input: your Employee export from the school SQL Server (employee.csv
+#   in Milestone 2, or Chinook.dbo.Employee.csv)
+# Rules:
+#   - fixed random seed 722, so the file is identical every time
+#   - one salary per employee, uniformly random inside the range for
+#     the employee's Title (below), rounded to the nearest 500
+#   - ranges (CAD per year):
+#       General Manager       120,000 - 140,000
+#       Sales Manager          85,000 -  99,500
+#       IT Manager             85,000 -  99,500
+#       IT Staff               55,000 -  65,000
+#       Sales Support Agent    42,000 -  52,000
+# =====================================================================
+import csv, random, sys
+
+SRC = sys.argv[1] if len(sys.argv) > 1 else './Chinook.dbo.Employee.csv'
+OUT = sys.argv[2] if len(sys.argv) > 2 else './employeesalary.csv'
+RANGES = {
+    'General Manager': (120000, 140000),
+    'Sales Manager': (85000, 99500),
+    'IT Manager': (85000, 99500),
+    'IT Staff': (55000, 65000),
+    'Sales Support Agent': (42000, 52000),
+}
+random.seed(722)
+rows = sorted(csv.DictReader(open(SRC, encoding='utf-8-sig')), key=lambda r: int(r['EmployeeId']))
+with open(OUT, 'w', newline='', encoding='utf-8') as f:
+    w = csv.writer(f, lineterminator='\r\n')
+    w.writerow(['EmployeeId', 'StartingSalary'])
+    for r in rows:
+        lo, hi = RANGES[r['Title']]
+        salary = int(round(random.uniform(lo, hi) / 500.0)) * 500
+        w.writerow([int(r['EmployeeId']), salary])
+print('wrote', OUT, len(rows), 'rows')

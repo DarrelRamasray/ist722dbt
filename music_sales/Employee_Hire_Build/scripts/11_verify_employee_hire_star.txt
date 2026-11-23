@@ -1,0 +1,107 @@
+-- =====================================================================
+-- 11_verify_employee_hire_star.txt
+-- Run in: Snowsight > Projects > Workspaces > + Add New > SQL File
+--         Run the USE lines, then click inside the WITH checks AS query
+--         and press Ctrl+Enter.
+-- What it does: 21 checks of FACT_EMPLOYEE after dbt build, including
+--   the extended DIM_DATE, the conformed DIM_EMPLOYEE, a drill-across
+--   to FACT_SALE, and that Music Sales and Track Playtime are unchanged.
+--   All 21 rows should say PASS.
+-- Uses the same role, warehouse and schema as dbt.
+-- =====================================================================
+USE ROLE ACCOUNTADMIN;
+USE WAREHOUSE TRANSFORMING;
+USE SCHEMA ANALYTICS.DBT_DRAMASRAY_CHINOOK;
+
+WITH checks AS (
+    SELECT 1 AS n, 'FACT_EMPLOYEE row count' AS check_name, 8 AS expected,
+           (SELECT COUNT(*) FROM FACT_EMPLOYEE) AS actual
+
+    UNION ALL SELECT 2, 'FACT_EMPLOYEE distinct EMPLOYEEID', 8,
+           (SELECT COUNT(DISTINCT EMPLOYEEID) FROM FACT_EMPLOYEE)
+
+    UNION ALL SELECT 3, 'Sum of HIRECOUNT', 8,
+           (SELECT SUM(HIRECOUNT) FROM FACT_EMPLOYEE)
+
+    UNION ALL SELECT 4, 'EMPLOYEEKEY values missing from DIM_EMPLOYEE (conformed)', 0,
+           (SELECT COUNT(*) FROM FACT_EMPLOYEE f
+             WHERE NOT EXISTS (SELECT 1 FROM DIM_EMPLOYEE d WHERE d.EMPLOYEEKEY = f.EMPLOYEEKEY))
+
+    UNION ALL SELECT 5, 'HIREDATEKEY values missing from DIM_DATE (conformed)', 0,
+           (SELECT COUNT(*) FROM FACT_EMPLOYEE f
+             WHERE NOT EXISTS (SELECT 1 FROM DIM_DATE d WHERE d.DATEKEY = f.HIREDATEKEY))
+
+    UNION ALL SELECT 6, 'DIM_DATE row count (2002-01-01 to 2013-12-31)', 4383,
+           (SELECT COUNT(*) FROM DIM_DATE)
+
+    UNION ALL SELECT 7, 'DIM_DATE first day is 2002-01-01', 1,
+           (SELECT IFF(MIN(DATEKEY) = TO_DATE('2002-01-01'), 1, 0) FROM DIM_DATE)
+
+    UNION ALL SELECT 8, 'DIM_DATE last day is 2013-12-31', 1,
+           (SELECT IFF(MAX(DATEKEY) = TO_DATE('2013-12-31'), 1, 0) FROM DIM_DATE)
+
+    UNION ALL SELECT 9, 'DIM_DATE has no missing days', 1,
+           (SELECT IFF(COUNT(*) = DATEDIFF(day, MIN(DATEKEY), MAX(DATEKEY)) + 1, 1, 0)
+              FROM DIM_DATE)
+
+    UNION ALL SELECT 10, 'Hires in 2002, through DIM_DATE', 3,
+           (SELECT COUNT(*) FROM FACT_EMPLOYEE f
+              JOIN DIM_DATE d ON d.DATEKEY = f.HIREDATEKEY
+             WHERE d.YEAR = 2002)
+
+    UNION ALL SELECT 11, 'Hires in 2003, through DIM_DATE', 3,
+           (SELECT COUNT(*) FROM FACT_EMPLOYEE f
+              JOIN DIM_DATE d ON d.DATEKEY = f.HIREDATEKEY
+             WHERE d.YEAR = 2003)
+
+    UNION ALL SELECT 12, 'Hires in 2004, through DIM_DATE', 2,
+           (SELECT COUNT(*) FROM FACT_EMPLOYEE f
+              JOIN DIM_DATE d ON d.DATEKEY = f.HIREDATEKEY
+             WHERE d.YEAR = 2004)
+
+    UNION ALL SELECT 13, 'Sum of AGEATHIRE (average 37.875)', 303,
+           (SELECT SUM(AGEATHIRE) FROM FACT_EMPLOYEE)
+
+    UNION ALL SELECT 14, 'Margaret Park was 55 when hired (birthday 19 Sep, hired 3 May 2003)', 1,
+           (SELECT COUNT(*) FROM FACT_EMPLOYEE f
+              JOIN DIM_EMPLOYEE d ON d.EMPLOYEEKEY = f.EMPLOYEEKEY
+             WHERE d.LASTNAME = 'Park' AND f.AGEATHIRE = 55)
+
+    UNION ALL SELECT 15, 'Sum of STARTINGSALARY (same as RAW)', 569000,
+           (SELECT SUM(STARTINGSALARY) FROM FACT_EMPLOYEE)
+
+    UNION ALL SELECT 16, 'Salary bands that do not match the salary', 0,
+           (SELECT COUNT(*) FROM FACT_EMPLOYEE
+             WHERE SALARYBAND <> CASE
+                     WHEN STARTINGSALARY < 50000  THEN '1: Under 50K'
+                     WHEN STARTINGSALARY < 75000  THEN '2: 50K to 75K'
+                     WHEN STARTINGSALARY < 100000 THEN '3: 75K to 100K'
+                     ELSE '4: 100K and over' END)
+
+    UNION ALL SELECT 17, 'Hires in band 1: Under 50K', 3,
+           (SELECT COUNT(*) FROM FACT_EMPLOYEE WHERE SALARYBAND = '1: Under 50K')
+
+    UNION ALL SELECT 18, 'Drill-across: Total Sales of reps hired in 2003 (Park + Johnson)', 1495.56,
+           (SELECT SUM(s.SALEAMOUNT)
+              FROM FACT_SALE s
+              JOIN FACT_EMPLOYEE f ON f.EMPLOYEEKEY = s.EMPLOYEEKEY
+              JOIN DIM_DATE d      ON d.DATEKEY = f.HIREDATEKEY
+             WHERE d.YEAR = 2003)
+
+    UNION ALL SELECT 19, 'FACT_SALE still has 2,240 rows (Music Sales unchanged)', 2240,
+           (SELECT COUNT(*) FROM FACT_SALE)
+
+    UNION ALL SELECT 20, 'FACT_TRACK_PLAYTIME still has 2,000 rows (Track Playtime unchanged)', 2000,
+           (SELECT COUNT(*) FROM FACT_TRACK_PLAYTIME)
+
+    UNION ALL SELECT 21, 'FACT_EMPLOYEE.HIREDATEKEY type is DATE (same as DIM_DATE.DATEKEY)', 1,
+           (SELECT IFF(DATA_TYPE = 'DATE', 1, 0)
+              FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+               AND TABLE_NAME = 'FACT_EMPLOYEE'
+               AND COLUMN_NAME = 'HIREDATEKEY')
+)
+SELECT n, check_name, expected, actual,
+       IFF(actual = expected, 'PASS', 'FAIL') AS result
+FROM checks
+ORDER BY n;

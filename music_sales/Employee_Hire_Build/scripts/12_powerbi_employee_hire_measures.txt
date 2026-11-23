@@ -1,0 +1,22 @@
+// =====================================================================
+// 12_powerbi_employee_hire_measures.txt
+// Use in: Power BI Desktop (MusicSales.pbix), guide Part 11.
+// For each measure: click an empty part of the page, click the name
+// FACT_EMPLOYEE in the Data pane, click Home > New measure, copy ONE
+// line below (the line that starts with the measure name) into the
+// formula bar and press Enter.
+// Expected value with no filters is in the comment above each line.
+// Salary figures come from SIMULATED data; hires and ages are real.
+// =====================================================================
+
+// Expected: 8   (format: Whole number)
+Hires = SUM ( FACT_EMPLOYEE[HIRECOUNT] )
+
+// Expected: 37.9   (37.875; format: Decimal number, 1 decimal place)
+Average Age at Hire = AVERAGE ( FACT_EMPLOYEE[AGEATHIRE] )
+
+// Expected: 569,000   (format: Whole number)
+Total Starting Salary = SUM ( FACT_EMPLOYEE[STARTINGSALARY] )
+
+// Expected: 71,125   (format: Whole number)
+Average Starting Salary = DIVIDE ( [Total Starting Salary], [Hires] )

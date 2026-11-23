@@ -1,0 +1,29 @@
+-- =====================================================================
+-- 01_setup_hire_raw.txt
+-- Run in: Snowsight > Projects > Workspaces > + Add New > SQL File
+--         Paste everything, then run the whole file:
+--         Ctrl+Shift+Enter (Mac: Cmd+Shift+Return)
+-- What it does: adds ONE empty table, EMPLOYEESALARY, to RAW.CHINOOK for
+--   the Employee Hire process. It reuses the Milestone 2 file format
+--   CHINOOK_CSV and stage CHINOOK_STAGE. RAW.CHINOOK.EMPLOYEE (8 rows)
+--   was already loaded in Milestone 2 and is not touched.
+--
+-- Do NOT re-run the Milestone 2 file 01_setup.sql or the Track Playtime
+-- file 02_setup_playtime_raw: they empty their tables.
+-- Re-running THIS file empties only EMPLOYEESALARY.
+-- =====================================================================
+USE ROLE SYSADMIN;
+USE WAREHOUSE COMPUTE_WH;
+USE SCHEMA RAW.CHINOOK;
+
+-- Chinook has no salary data, so this table holds SIMULATED values.
+CREATE OR REPLACE TABLE EMPLOYEESALARY (
+  EMPLOYEEID      INT NOT NULL,
+  STARTINGSALARY  INT NOT NULL,
+  _SOURCE_FILE    VARCHAR,
+  _LOADED_AT      TIMESTAMP_LTZ
+)
+COMMENT = 'SIMULATED annual starting salary (CAD) per employee for the Employee Hire process. Chinook has no salary data. Generated 2026-11-22 (seed 722) from real Chinook EmployeeId and Title values, inside a fixed range per title.';
+
+-- Check: 13 tables (9 Music Sales + 3 Track Playtime + EMPLOYEESALARY)
+SHOW TABLES IN SCHEMA RAW.CHINOOK;

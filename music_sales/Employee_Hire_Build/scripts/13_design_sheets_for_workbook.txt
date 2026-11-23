@@ -1,0 +1,52 @@
+=====================================================================
+13_design_sheets_for_workbook.txt
+Use in: Excel, 1. Bus Matrix workbook (guide Part 5).
+The lines between the BEGIN and END markers are TAB-separated, so pasting
+them into Excel fills one cell per value. Copy only the lines between the
+markers, never the markers themselves.
+=====================================================================
+
+
+A. New sheet fact_employee (a copy of fact_TEMPLATE)
+---------------------------------------------------------------------
+A1. Click cell A1 and type: fact_employee
+
+A2. Type each Table Details value into the cell shown:
+
+    B3   fact_employee
+    B4   Fact
+    B5   Transaction (pick it from the drop-down)
+    B6   One row per employee hired; each row is unique by employeeid. Starting salary and salary band are SIMULATED: Chinook has no salary data, so salaries were generated inside a fixed range per title.
+
+A3. Click cell A10, then paste these 7 lines (columns A to H: Column
+    Name, Description, DataType, PK, unique, not_null,
+    FK Ref Dimension.col, Source):
+
+----- BEGIN fact_employee columns -----
+employeeid	Source key of the employee; used for drill-through	int	X	X	X		Chinook.Employee.EmployeeId
+employeekey	Dimension FK for dim_employee; the employee hired	int			X	dim_employee.employeekey	Chinook.Employee.EmployeeId
+hiredatekey	Dimension FK for dim_date; the hire date	date			X	dim_date.datekey	Chinook.Employee.HireDate; CAST(HireDate AS date); employees with no hire date are left out
+hirecount	So hires can be counted; Always 1; Additive	int			X		Insert '1'
+ageathire	Age in whole years on the hire date; Non-additive (average it)	int					Chinook.Employee.BirthDate and HireDate; whole years between them
+startingsalary	Annual starting salary in CAD; Additive; SIMULATED	int			X		Chinook.EmployeeSalary.StartingSalary (simulated)
+salaryband	Band of the starting salary; Degenerate; SIMULATED	varchar(20)			X		CASE on startingsalary: 1: Under 50K, 2: 50K to 75K, 3: 75K to 100K, 4: 100K and over
+----- END fact_employee columns -----
+
+
+B. Bus Matrix sheet: one cell
+---------------------------------------------------------------------
+Row 4 (Employee Hire), the Facts column (column E). Replace
+"Hire count, salary band" with:
+
+    Hire count, age at hire, starting salary, salary band (salary simulated)
+
+Leave everything else in row 4 as it is: fact_employee, Transaction,
+"One row per employee hired", and the X under Date and Employee already
+match the build.
+
+
+C. Nothing else
+---------------------------------------------------------------------
+dim_employee and dim_date are reused as they are. dim_date now covers
+2002-01-01 to 2013-12-31; its sheet's description ("One row per calendar
+day") still fits.

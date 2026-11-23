@@ -1,0 +1,61 @@
+-- =====================================================================
+-- 04_verify_hire_raw.txt
+-- Run in: Snowsight > Projects > Workspaces > + Add New > SQL File
+--         Run the USE lines, then click inside the WITH checks AS query
+--         and press Ctrl+Enter.
+-- What it does: 11 checks of EMPLOYEESALARY and of the EMPLOYEE columns
+--   Employee Hire uses. All 11 rows should say PASS.
+-- =====================================================================
+USE ROLE SYSADMIN;
+USE WAREHOUSE COMPUTE_WH;
+USE SCHEMA RAW.CHINOOK;
+
+WITH checks AS (
+    SELECT 1 AS n, 'EMPLOYEESALARY row count' AS check_name, 8 AS expected,
+           (SELECT COUNT(*) FROM EMPLOYEESALARY) AS actual
+
+    UNION ALL SELECT 2, 'EMPLOYEESALARY distinct EMPLOYEEID', 8,
+           (SELECT COUNT(DISTINCT EMPLOYEEID) FROM EMPLOYEESALARY)
+
+    UNION ALL SELECT 3, 'EMPLOYEESALARY.EMPLOYEEID values missing from EMPLOYEE', 0,
+           (SELECT COUNT(*) FROM EMPLOYEESALARY s
+             WHERE NOT EXISTS (SELECT 1 FROM EMPLOYEE e WHERE e.EMPLOYEEID = s.EMPLOYEEID))
+
+    UNION ALL SELECT 4, 'EMPLOYEE rows with no salary', 0,
+           (SELECT COUNT(*) FROM EMPLOYEE e
+             WHERE NOT EXISTS (SELECT 1 FROM EMPLOYEESALARY s WHERE s.EMPLOYEEID = e.EMPLOYEEID))
+
+    UNION ALL SELECT 5, 'Salaries outside the range for the employee''s title', 0,
+           (SELECT COUNT(*) FROM EMPLOYEESALARY s
+              JOIN EMPLOYEE e ON e.EMPLOYEEID = s.EMPLOYEEID
+             WHERE NOT (
+                   (e.TITLE = 'General Manager'     AND s.STARTINGSALARY BETWEEN 120000 AND 140000)
+                OR (e.TITLE = 'Sales Manager'       AND s.STARTINGSALARY BETWEEN  85000 AND  99500)
+                OR (e.TITLE = 'IT Manager'          AND s.STARTINGSALARY BETWEEN  85000 AND  99500)
+                OR (e.TITLE = 'IT Staff'            AND s.STARTINGSALARY BETWEEN  55000 AND  65000)
+                OR (e.TITLE = 'Sales Support Agent' AND s.STARTINGSALARY BETWEEN  42000 AND  52000)))
+
+    UNION ALL SELECT 6, 'Sum of EMPLOYEESALARY.STARTINGSALARY', 569000,
+           (SELECT SUM(STARTINGSALARY) FROM EMPLOYEESALARY)
+
+    UNION ALL SELECT 7, 'EMPLOYEE row count (unchanged since Milestone 2)', 8,
+           (SELECT COUNT(*) FROM EMPLOYEE)
+
+    UNION ALL SELECT 8, 'EMPLOYEE rows with no HIREDATE', 0,
+           (SELECT COUNT(*) FROM EMPLOYEE WHERE HIREDATE IS NULL)
+
+    UNION ALL SELECT 9, 'EMPLOYEE rows with no BIRTHDATE', 0,
+           (SELECT COUNT(*) FROM EMPLOYEE WHERE BIRTHDATE IS NULL)
+
+    UNION ALL SELECT 10, 'Hire dates between 2002-01-01 and 2004-12-31', 8,
+           (SELECT COUNT(*) FROM EMPLOYEE
+             WHERE CAST(HIREDATE AS DATE) BETWEEN '2002-01-01' AND '2004-12-31')
+
+    UNION ALL SELECT 11, 'EMPLOYEESALARY rows missing _SOURCE_FILE or _LOADED_AT', 0,
+           (SELECT COUNT(*) FROM EMPLOYEESALARY
+             WHERE _SOURCE_FILE IS NULL OR _LOADED_AT IS NULL)
+)
+SELECT n, check_name, expected, actual,
+       IFF(actual = expected, 'PASS', 'FAIL') AS result
+FROM checks
+ORDER BY n;
