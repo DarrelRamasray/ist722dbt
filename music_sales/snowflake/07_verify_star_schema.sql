@@ -1,30 +1,30 @@
 -- =====================================================================
 -- 07_verify_star_schema.sql
 -- Run in: Snowsight > Projects > Workspaces
--- What it does: 23 checks of the six tables dbt built, against
---   the source data. All 23 rows should say PASS.
--- Run STEP 1 on its own first, then edit and run STEP 2 and STEP 3.
+-- What it does: 23 checks of the six Music Sales tables dbt built,
+--   against the source data. All 23 rows should say PASS.
+-- Updated for Employee Hire (Milestone 3): DIM_DATE now covers full
+--   calendar years 2002-01-01 to 2013-12-31 (checks 6, 16 and 17), and
+--   STEP 1 and 2 carry Darrel's values. Run STEP 1, 2 and 3 in order.
 -- =====================================================================
 
 
 -- ---------------------------------------------------------------------
 -- STEP 1. Find where dbt built the tables.
---   Note the database_name and schema_name columns of the result,
---   for example ANALYTICS and DBT_DARRE_CHINOOK. If more than one row
---   appears, use the one whose schema_name ends in CHINOOK.
+--   The result should show database_name ANALYTICS and schema_name
+--   DBT_DRAMASRAY_CHINOOK. If more than one row appears, that is the
+--   one these checks use.
 -- ---------------------------------------------------------------------
--- Replace SYSADMIN with the Role dbt uses (Part 1), if different.
-USE ROLE SYSADMIN;
+USE ROLE ACCOUNTADMIN;
 SHOW TABLES LIKE 'FACT_SALE' IN ACCOUNT;
 
 
 -- ---------------------------------------------------------------------
 -- STEP 2. Point this file at that schema.
---   Replace ANALYTICS.YOUR_DBT_SCHEMA with database_name.schema_name
---   from STEP 1.
+--   STEP 1 should show ANALYTICS and DBT_DRAMASRAY_CHINOOK.
 -- ---------------------------------------------------------------------
-USE WAREHOUSE COMPUTE_WH;
-USE SCHEMA ANALYTICS.YOUR_DBT_SCHEMA;
+USE WAREHOUSE TRANSFORMING;
+USE SCHEMA ANALYTICS.DBT_DRAMASRAY_CHINOOK;
 
 
 -- ---------------------------------------------------------------------
@@ -51,7 +51,7 @@ WITH checks AS (
            (SELECT COUNT(*)
               FROM DIM_TRACK)
 
-    UNION ALL SELECT 6, 'DIM_DATE row count (2009-01-01 to 2013-12-22)', 1817,
+    UNION ALL SELECT 6, 'DIM_DATE row count (2002-01-01 to 2013-12-31)', 4383,
            (SELECT COUNT(*)
               FROM DIM_DATE)
 
@@ -98,12 +98,12 @@ WITH checks AS (
            (SELECT COUNT(DISTINCT INVOICEDATEKEY)
               FROM FACT_SALE)
 
-    UNION ALL SELECT 16, 'DIM_DATE first day is 2009-01-01', 1,
-           (SELECT IFF(MIN(DATEKEY) = TO_DATE('2009-01-01'), 1, 0)
+    UNION ALL SELECT 16, 'DIM_DATE first day is 2002-01-01', 1,
+           (SELECT IFF(MIN(DATEKEY) = TO_DATE('2002-01-01'), 1, 0)
               FROM DIM_DATE)
 
-    UNION ALL SELECT 17, 'DIM_DATE last day is 2013-12-22', 1,
-           (SELECT IFF(MAX(DATEKEY) = TO_DATE('2013-12-22'), 1, 0)
+    UNION ALL SELECT 17, 'DIM_DATE last day is 2013-12-31', 1,
+           (SELECT IFF(MAX(DATEKEY) = TO_DATE('2013-12-31'), 1, 0)
               FROM DIM_DATE)
 
     UNION ALL SELECT 18, 'DIM_DATE has no missing days', 1,

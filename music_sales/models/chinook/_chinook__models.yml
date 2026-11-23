@@ -5,6 +5,7 @@
 #   for every PK, unique and not_null tick in the design sheets, plus a
 #   relationships test for every FK Ref Dimension.col in fact_sale.
 # Design: 1. Bus_MatrixV7_simplified.xlsx
+# Employee Hire (Milestone 3) changed only the dim_date description.
 # =====================================================================
 
 version: 2
@@ -75,7 +76,7 @@ models:
           - not_null
 
   - name: dim_date
-    description: "One row per calendar day, from the first to the last invoice date."
+    description: "One row per calendar day, for every full calendar year from the earliest invoice or hire date to the latest (2002-01-01 to 2013-12-31 today)."
     columns:
       - name: datekey
         description: "Dimension key; the calendar date"

@@ -4,13 +4,14 @@
 # What it does: tells dbt where the RAW tables live, so models can
 #   use source('chinook', 'invoiceline') instead of table names.
 # Track Playtime (Milestone 3) added playlist, playlisttrack and trackplays.
+# Employee Hire (Milestone 3) added employeesalary.
 # =====================================================================
 
 version: 2
 
 sources:
   - name: chinook
-    description: "Chinook tables copied unchanged from the school SQL Server (staging guide, Parts 1-7), plus the simulated TRACKPLAYS table."
+    description: "Chinook tables copied unchanged from the school SQL Server (staging guide, Parts 1-7), plus the simulated TRACKPLAYS and EMPLOYEESALARY tables."
     database: RAW
     schema: CHINOOK
     tables:
@@ -27,3 +28,5 @@ sources:
       - name: playlisttrack
       - name: trackplays
         description: "SIMULATED play events (Chinook has no play-event table). Generated with seed 722 from real customer, playlist and track IDs."
+      - name: employeesalary
+        description: "SIMULATED annual starting salary (CAD) per employee (Chinook has no salary data). Generated with seed 722 inside a fixed range per title."
