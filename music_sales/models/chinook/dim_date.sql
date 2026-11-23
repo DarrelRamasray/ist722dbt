@@ -2,8 +2,16 @@
 -- dim_date.sql
 -- Location: music_sales/models/chinook/ in the ist722dbt repository
 -- Design:  dim_date sheet, 1. Bus_MatrixV7_simplified.xlsx
--- Grain:   one row per calendar day, from the first to the last
---          invoice date (read from the data, not typed in)
+-- Grain:   one row per calendar day, for every full calendar year from
+--          the earliest invoice or hire date to the latest one (read
+--          from the data, not typed in). Today: 2002-01-01 to 2013-12-31,
+--          4,383 days.
+--
+-- Changed for Employee Hire (Milestone 3): hire dates (2002-2004) are
+-- earlier than the first invoice (2009-01-01), so the range now also
+-- reads RAW.CHINOOK.EMPLOYEE and runs from 1 January of the first year
+-- to 31 December of the last. Every existing invoice and play date is
+-- still inside it, so FACT_SALE and FACT_TRACK_PLAYTIME are unaffected.
 --
 -- Snowflake version of the sheet's SQL Server query:
 --   * the day list uses Snowflake's GENERATOR instead of a recursive CTE
@@ -13,15 +21,26 @@
 
 {{ config(materialized='table') }}
 
-with bounds as (
-    select
-        cast(min(invoicedate) as date) as firstdate,
-        cast(max(invoicedate) as date) as lastdate
+with eventdates as (
+    select cast(invoicedate as date) as d
     from {{ source('chinook', 'invoice') }}
+
+    union all
+
+    select cast(hiredate as date) as d
+    from {{ source('chinook', 'employee') }}
+    where hiredate is not null
+),
+
+bounds as (
+    select
+        date_from_parts(year(min(d)), 1, 1)   as firstdate,
+        date_from_parts(year(max(d)), 12, 31) as lastdate
+    from eventdates
 ),
 
 -- 10,000 candidate days (about 27 years); the WHERE clause at the bottom
--- keeps only the days up to the last invoice date
+-- keeps only the days up to the last date
 spine as (
     select
         dateadd(day, row_number() over (order by seq4()) - 1, b.firstdate) as d,
